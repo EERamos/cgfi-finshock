@@ -54,3 +54,20 @@ test('R is a loss given default: R = 0 leaves interbank claims at full value', (
 	const [v0] = finalValuations('Merton', { R: 0 })
 	assert.equal(v0, 1)
 })
+
+test('realdata.csv follows the documented import format (header row, then N banks with 4 + N columns)', async () => {
+	const { readFile } = await import('node:fs/promises')
+	const text = (await readFile(new URL('../realdata.csv', import.meta.url), 'utf8')).replace(/^﻿/, '')
+	// Same rule as importData() in src/store/store.ts: the first line is a header and is dropped.
+	const rows = text
+		.split(/\r?\n/)
+		.slice(1)
+		.filter((line) => line.trim() !== '')
+		.map((line) => line.split(','))
+	const owedByColumns = rows[0].length - 4
+	assert.equal(rows.length, owedByColumns, 'number of banks must equal number of OwedBy columns')
+	for (const row of rows) {
+		assert.equal(row.length, 4 + owedByColumns)
+		assert.ok(Number.isFinite(Number(row[2])), `ExtAssets of ${row[0]} is not numeric`)
+	}
+})
